@@ -2,18 +2,22 @@ from dotenv import load_dotenv
 import streamlit as st
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
-from langchain.llms import OpenAI
-from langchain.callbacks import get_openai_callback
-
+from langchain.llms import AI21
+import tensorflow as tf
+from langchain.embeddings import TensorflowHubEmbeddings
+import os
 
 def main():
     load_dotenv()
+
+    AI21_API_KEY  = os.getenv('AI21_API_KEY')
+   
+
     st.set_page_config(page_title="Ask your PDF")
     st.header("Ask your PDF 💬")
-    
+  
     # upload file
     pdf = st.file_uploader("Upload your PDF", type="pdf")
     
@@ -32,21 +36,28 @@ def main():
         length_function=len
       )
       chunks = text_splitter.split_text(text)
+      #st.write(chunks)
       
       # create embeddings
-      embeddings = OpenAIEmbeddings()
+      #embeddings = OpenAIEmbeddings()
+      embeddings = TensorflowHubEmbeddings()
+      #st.write(embeddings)
       knowledge_base = FAISS.from_texts(chunks, embeddings)
+      #st.write(knowledge_base)
       
       # show user input
       user_question = st.text_input("Ask a question about your PDF:")
       if user_question:
         docs = knowledge_base.similarity_search(user_question)
         
-        llm = OpenAI()
+        llm = AI21(ai21_api_key=AI21_API_KEY)
+       
+        #llm = OpenAI()
         chain = load_qa_chain(llm, chain_type="stuff")
-        with get_openai_callback() as cb:
-          response = chain.run(input_documents=docs, question=user_question)
-          print(cb)
+        response = chain.run(input_documents=docs, question=user_question)
+        #with get_openai_callback() as cb:
+        #  response = chain.run(input_documents=docs, question=user_question)
+        #  print(cb)
            
         st.write(response)
     
